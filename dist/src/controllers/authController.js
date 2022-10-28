@@ -35,51 +35,96 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifiedEmail = exports.signUp = void 0;
-const prisma_1 = require("../database/prisma");
-const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const zod_1 = require("zod");
+exports.SignUp = exports.SignIn = void 0;
 const email_1 = __importStar(require("../helpers/email"));
+const user_1 = require("../models/user");
+const validate_1 = require("../helpers/validate");
+const schema_1 = require("../helpers/schema");
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const crypto_1 = __importDefault(require("crypto"));
-const UserSchema = zod_1.z
-    .object({
-    email: zod_1.z
-        .string({ required_error: "email is required" })
-        .email({ message: "invalid email address" }),
-    passwordHash: zod_1.z
-        .string({ required_error: "password is required" })
-        .min(6, { message: "password must be 6 or more characters long " }),
-    confirmPassword: zod_1.z.string({
-        required_error: "confirm password is required",
-    }),
-})
-    .refine((data) => data.passwordHash === data.confirmPassword, {
-    message: "Password not match",
-    path: ["confirmPassword"],
-});
-const signUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const body = yield req.body;
+const jsonwebtoken_1 = require("jsonwebtoken");
+const constant_1 = require("../configs/constant");
+const prisma_1 = require("../database/prisma");
+const SignIn = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const body = req.body;
     let resJson;
-    try {
-        yield UserSchema.parseAsync(body);
+    body.confirmPassword = body.passwordHash;
+    const validation = yield (0, validate_1.Validate)(schema_1.UserSchema, body);
+    if (validation) {
+        resJson = {
+            code: 400,
+            status: "Bad Request",
+            data: [],
+            errors: validation,
+        };
+        return res.status(400).json(resJson);
     }
-    catch (error) {
-        if (error instanceof zod_1.z.ZodError) {
-            resJson = {
-                code: 400,
-                status: "Bad Request",
-                data: [],
-                errors: error.errors.map((msg) => msg.message),
-            };
-            return res.status(400).json(resJson);
-        }
+    const { data } = yield (0, user_1.GetUserByEmail)(body.email);
+    if (!data[0]) {
+        resJson = {
+            code: 404,
+            status: "Not Found",
+            data: [],
+            errors: ["Email or Password is correct"],
+        };
+        return res.status(404).json(resJson);
     }
-    const checkUserExist = yield prisma_1.prisma.user.findUnique({
+    const checkPassword = yield bcryptjs_1.default.compare(body.passwordHash, data[0].passwordHash);
+    if (!checkPassword) {
+        resJson = {
+            code: 404,
+            status: "Not Found",
+            data: [],
+            errors: ["Email or Password is correct"],
+        };
+        return res.status(404).json(resJson);
+    }
+    const refreshToken = (0, jsonwebtoken_1.sign)({
+        id: data[0].id,
+        email: data[0].email,
+        role: data[0].role,
+    }, String(constant_1.JWT_SECRET_REFRESH_TOKEN), {
+        expiresIn: "30d",
+    });
+    const accessToken = (0, jsonwebtoken_1.sign)({
+        id: data[0].id,
+        email: data[0].email,
+        role: data[0].role,
+    }, String(constant_1.JWT_SECRET_ACCESS_TOKEN), {
+        expiresIn: "1h",
+    });
+    const newData = yield prisma_1.prisma.user.update({
         where: {
             email: body.email,
         },
+        data: {
+            refreshToken,
+        },
     });
-    if (checkUserExist) {
+    resJson = {
+        code: 200,
+        status: "OK",
+        data: [Object.assign(Object.assign({}, newData), { accessToken })],
+        errors: [],
+    };
+    return res.status(200).json(resJson);
+});
+exports.SignIn = SignIn;
+const SignUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const body = yield req.body;
+    let resJson;
+    const validation = yield (0, validate_1.Validate)(schema_1.UserSchema, body);
+    if (validation) {
+        resJson = {
+            code: 400,
+            status: "Bad Request",
+            data: [],
+            errors: validation,
+        };
+        return res.status(400).json(resJson);
+    }
+    const checkUserAlreadyExist = yield (0, user_1.GetUserByEmail)(body.email);
+    if (checkUserAlreadyExist.data[0]) {
         resJson = {
             code: 409,
             status: "Conflict",
@@ -88,81 +133,65 @@ const signUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         };
         return res.status(409).json(resJson);
     }
-    const salt = yield bcryptjs_1.default.genSalt(10);
-    body.passwordHash = yield bcryptjs_1.default.hash(body.passwordHash, salt);
-    let userCreate;
-    let token;
-    try {
-        token = crypto_1.default.randomBytes(32).toString("hex");
-        userCreate = yield prisma_1.prisma.user.create({
-            data: {
-                email: body.email,
-                passwordHash: body.passwordHash,
-                VerifiedEmail: {
-                    create: {
-                        token,
-                    },
-                },
-            },
-        });
-    }
-    catch (error) {
+    const token = crypto_1.default.randomBytes(32).toString("hex");
+    const { data, errors } = yield (0, user_1.CreateUser)(body, token);
+    if ((errors === null || errors === void 0 ? void 0 : errors.length) !== 0) {
         resJson = {
             code: 500,
             status: "Internal Server Error",
             data: [],
-            errors: ["Internal Server Error Please Contact Administrator"],
+            errors: ["Error to create data user"],
         };
-        return res.status(500).json(resJson);
     }
     (0, email_1.default)(body.email, "Verification User", (0, email_1.bodyEmail)(`http://localhost:3000/auth/verified/${token}`));
-    resJson = {
-        code: 201,
-        status: "Created",
-        data: [userCreate],
-        errors: [],
-    };
-    return res.json(resJson);
-});
-exports.signUp = signUp;
-const verifiedEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    let resJson;
-    const token = req.params.token;
-    const idEmail = yield prisma_1.prisma.verifiedEmail.findFirst({ where: { token } });
-    if (!idEmail) {
+    if (data) {
         resJson = {
-            code: 404,
-            status: "Not Found",
-            data: [],
-            errors: ["Invalid Token"],
+            code: 201,
+            status: "Created",
+            data: data,
+            errors: [],
         };
-        return res.status(404).json(resJson);
+        return res.json(resJson);
     }
-    try {
-        yield prisma_1.prisma.user.update({
-            where: {
-                id: idEmail.userId,
-            },
-            data: {
-                isVerified: true,
-            },
-        });
-    }
-    catch (error) {
-        resJson = {
-            code: 500,
-            status: "Internal Server Error",
-            data: [],
-            errors: ["Something wrong Internal Server Error"],
-        };
-    }
-    resJson = {
-        code: 200,
-        status: "OK",
-        data: [{ message: "Validate User Email is Success" }],
-        errors: [],
-    };
-    res.status(200).json(resJson);
 });
-exports.verifiedEmail = verifiedEmail;
+exports.SignUp = SignUp;
+//   export const verifiedEmail = async (req: Request, res: Response) => {
+//     let resJson: ResponseJson;
+//     const token = req.params.token;
+//     const idEmail = await prisma.verifiedEmail.findFirst({ where: { token } });
+//     if (!idEmail) {
+//       resJson = {
+//         code: 404,
+//         status: "Not Found",
+//         data: [],
+//         errors: ["Invalid Token"],
+//       };
+//       return res.status(404).json(resJson);
+//     }
+//     try {
+//       await prisma.user.update({
+//         where: {
+//           id: idEmail.userId,
+//         },
+//         data: {
+//           isVerified: true,
+//         },
+//       });
+//     } catch (error) {
+//       resJson = {
+//         code: 500,
+//         status: "Internal Server Error",
+//         data: [],
+//         errors: ["Something wrong Internal Server Error"],
+//       };
+//     }
+//     resJson = {
+//       code: 200,
+//       status: "OK",
+//       data: [{ message: "Validate User Email is Success" }],
+//       errors: [],
+//     };
+//     res.status(200).json(resJson);
+//   };
+// };
 //# sourceMappingURL=authController.js.map

@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const authController_1 = require("../controllers/authController");
 const authRoute = express_1.default.Router();
-authRoute.post("/signup", authController_1.signUp);
-authRoute.get("/verified/:token", authController_1.verifiedEmail);
+authRoute.post("/signup", authController_1.SignUp);
+authRoute.post("/signin", authController_1.SignIn);
 exports.default = authRoute;
 //# sourceMappingURL=authRoute.js.map

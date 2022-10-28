@@ -9,26 +9,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateAction = void 0;
-function validateAction({ request, schema, }) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const body = request.body;
-        try {
-            const formData = schema.parse(body);
-            return { formData, errors: null };
+exports.Validate = void 0;
+const zod_1 = require("zod");
+const Validate = (schema, body) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        yield schema.parseAsync(body);
+    }
+    catch (error) {
+        if (error instanceof zod_1.z.ZodError) {
+            return error.errors.map((msg) => msg.message);
         }
-        catch (e) {
-            console.error(e);
-            const errors = e;
-            return {
-                errors: errors.issues.reduce((acc, curr) => {
-                    const key = curr.path[0];
-                    acc[key] = curr.message;
-                    return acc;
-                }, {}),
-            };
-        }
-    });
-}
-exports.validateAction = validateAction;
+    }
+});
+exports.Validate = Validate;
 //# sourceMappingURL=validate.js.map
