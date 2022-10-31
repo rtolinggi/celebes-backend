@@ -9,7 +9,7 @@ const cors_1 = __importDefault(require("cors"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const constant_1 = require("./configs/constant");
 const authRoute_1 = __importDefault(require("./routes/authRoute"));
-const whiteList = ["http://localhost:3000"];
+const whiteList = ["*"];
 const corsOptions = {
     origin(requestOrigin, callback) {
         if (whiteList.indexOf(String(requestOrigin)) !== -1 || !requestOrigin) {
@@ -20,7 +20,7 @@ const corsOptions = {
         }
     },
     credentials: true,
-    exposedHeaders: ["set-cookie"],
+    exposedHeaders: ["token"],
 };
 const port = constant_1.PORT || 3000;
 const app = (0, express_1.default)();

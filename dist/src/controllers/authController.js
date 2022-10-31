@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SignUp = exports.SignIn = void 0;
+exports.SignOut = exports.SignUp = exports.SignIn = void 0;
 const email_1 = __importStar(require("../helpers/email"));
 const user_1 = require("../models/user");
 const validate_1 = require("../helpers/validate");
@@ -68,6 +68,24 @@ const SignIn = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             errors: ["Email or Password is correct"],
         };
         return res.status(404).json(resJson);
+    }
+    if (!data[0].isVerified) {
+        resJson = {
+            code: 401,
+            status: "Unautorized",
+            data: [],
+            errors: ["Email Not Verified, Please Verified youre email"],
+        };
+        return res.status(401).json(resJson);
+    }
+    if (!data[0].isActive) {
+        resJson = {
+            code: 401,
+            status: "Unautorized",
+            data: [],
+            errors: ["User Not Active, Please contact administrator"],
+        };
+        return res.status(401).json(resJson);
     }
     const checkPassword = yield bcryptjs_1.default.compare(body.passwordHash, data[0].passwordHash);
     if (!checkPassword) {
@@ -104,10 +122,26 @@ const SignIn = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     resJson = {
         code: 200,
         status: "OK",
-        data: [Object.assign(Object.assign({}, newData), { accessToken })],
+        data: [
+            {
+                id: newData.id,
+                email: newData.email,
+                role: newData.role,
+                accessToken,
+                refreshToken,
+            },
+        ],
         errors: [],
     };
-    return res.status(200).json(resJson);
+    return res
+        .cookie("token", refreshToken, {
+        httpOnly: true,
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        path: "/",
+        // secure: true,
+    })
+        .status(200)
+        .json(resJson);
 });
 exports.SignIn = SignIn;
 const SignUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -155,6 +189,60 @@ const SignUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.SignUp = SignUp;
+const SignOut = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    let resJson;
+    const token = (_a = req.cookies) === null || _a === void 0 ? void 0 : _a.token;
+    if (!token) {
+        resJson = {
+            code: 401,
+            status: "Unautorized",
+            data: [],
+            errors: ["Token is required, Youre not login"],
+        };
+        return res.status(401).json(resJson);
+    }
+    const user = yield prisma_1.prisma.user.findFirst({
+        where: {
+            refreshToken: token,
+        },
+    });
+    if (!user) {
+        resJson = {
+            code: 401,
+            status: "Unautorized",
+            data: [],
+            errors: ["Token not valid"],
+        };
+    }
+    try {
+        yield prisma_1.prisma.user.update({
+            where: {
+                id: user === null || user === void 0 ? void 0 : user.id,
+            },
+            data: {
+                refreshToken: "",
+            },
+        });
+        resJson = {
+            code: 200,
+            status: "OK",
+            data: [{ message: "Logout Success" }],
+            errors: [],
+        };
+        return res.clearCookie("token", { path: "/" }).status(200).json(resJson);
+    }
+    catch (error) {
+        resJson = {
+            code: 500,
+            status: "Internal Server Error",
+            data: [],
+            errors: ["Something wrong, Logout Failed"],
+        };
+        return res.status(500).json(resJson);
+    }
+});
+exports.SignOut = SignOut;
 //   export const verifiedEmail = async (req: Request, res: Response) => {
 //     let resJson: ResponseJson;
 //     const token = req.params.token;

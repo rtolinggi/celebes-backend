@@ -41,6 +41,26 @@ export const SignIn = async (req: Request, res: Response) => {
     return res.status(404).json(resJson);
   }
 
+  if (!data[0].isVerified) {
+    resJson = {
+      code: 401,
+      status: "Unautorized",
+      data: [],
+      errors: ["Email Not Verified, Please Verified youre email"],
+    };
+    return res.status(401).json(resJson);
+  }
+
+  if (!data[0].isActive) {
+    resJson = {
+      code: 401,
+      status: "Unautorized",
+      data: [],
+      errors: ["User Not Active, Please contact administrator"],
+    };
+    return res.status(401).json(resJson);
+  }
+
   const checkPassword = await bcrypt.compare(
     body.passwordHash,
     data[0].passwordHash
@@ -92,10 +112,26 @@ export const SignIn = async (req: Request, res: Response) => {
   resJson = {
     code: 200,
     status: "OK",
-    data: [{ ...newData, accessToken }],
+    data: [
+      {
+        id: newData.id,
+        email: newData.email,
+        role: newData.role,
+        accessToken,
+        refreshToken,
+      },
+    ],
     errors: [],
   };
-  return res.status(200).json(resJson);
+  return res
+    .cookie("token", refreshToken, {
+      httpOnly: true,
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: "/",
+      // secure: true,
+    })
+    .status(200)
+    .json(resJson);
 };
 
 export const SignUp = async (req: Request, res: Response) => {
@@ -150,6 +186,61 @@ export const SignUp = async (req: Request, res: Response) => {
     };
 
     return res.json(resJson);
+  }
+};
+
+export const SignOut = async (req: Request, res: Response) => {
+  let resJson: ResponseJson;
+  const token = req.cookies?.token;
+
+  if (!token) {
+    resJson = {
+      code: 401,
+      status: "Unautorized",
+      data: [],
+      errors: ["Token is required, Youre not login"],
+    };
+    return res.status(401).json(resJson);
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      refreshToken: token,
+    },
+  });
+  if (!user) {
+    resJson = {
+      code: 401,
+      status: "Unautorized",
+      data: [],
+      errors: ["Token not valid"],
+    };
+  }
+
+  try {
+    await prisma.user.update({
+      where: {
+        id: user?.id,
+      },
+      data: {
+        refreshToken: "",
+      },
+    });
+    resJson = {
+      code: 200,
+      status: "OK",
+      data: [{ message: "Logout Success" }],
+      errors: [],
+    };
+    return res.clearCookie("token", { path: "/" }).status(200).json(resJson);
+  } catch (error) {
+    resJson = {
+      code: 500,
+      status: "Internal Server Error",
+      data: [],
+      errors: ["Something wrong, Logout Failed"],
+    };
+    return res.status(500).json(resJson);
   }
 };
 

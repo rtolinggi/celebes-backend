@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser";
 import { PORT } from "./configs/constant";
 import authRoute from "./routes/authRoute";
 
-const whiteList = ["http://localhost:3000"];
+const whiteList = ["*"];
 const corsOptions: CorsOptions = {
   origin(requestOrigin, callback) {
     if (whiteList.indexOf(String(requestOrigin)) !== -1 || !requestOrigin) {
@@ -15,7 +15,7 @@ const corsOptions: CorsOptions = {
     }
   },
   credentials: true,
-  exposedHeaders: ["set-cookie"],
+  exposedHeaders: ["token"],
 };
 
 const port = PORT || 3000;
