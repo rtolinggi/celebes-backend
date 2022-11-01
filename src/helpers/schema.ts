@@ -1,18 +1,18 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const UserSchema = z
   .object({
     email: z
-      .string({ required_error: "email is required" })
-      .email({ message: "invalid email address" }),
+      .string({ required_error: 'email tidak boleh kosong' })
+      .email({ message: 'format email tidak valid' }),
     passwordHash: z
-      .string({ required_error: "password is required" })
-      .min(6, { message: "password must be 6 or more characters long " }),
+      .string({ required_error: 'password tidak boleh kosong' })
+      .min(6, { message: 'password minimal 6 karakter' }),
     confirmPassword: z.string().optional(),
   })
-  .refine((data) => data.passwordHash === data.confirmPassword, {
-    message: "Password not match",
-    path: ["confirmPassword"],
+  .refine(data => data.passwordHash === data.confirmPassword, {
+    message: 'password tidak cocok',
+    path: ['confirmPassword'],
   });
 
 export type ActionInputUser = z.infer<typeof UserSchema>;

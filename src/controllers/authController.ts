@@ -1,17 +1,17 @@
-import type { Request, Response } from "express";
-import type { ResponseJson } from "../helpers/types";
-import createTransporter, { bodyEmail } from "../helpers/email";
-import { CreateUser, GetUserByEmail } from "../models/user";
-import { Validate } from "../helpers/validate";
-import { ActionInputUser, UserSchema } from "../helpers/schema";
-import bcrypt from "bcryptjs";
-import crypto from "crypto";
-import { sign } from "jsonwebtoken";
+import type { Request, Response } from 'express';
+import type { ResponseJson } from '../helpers/types';
+import createTransporter, { bodyEmail } from '../helpers/email';
+import { CreateUser, GetUserByEmail } from '../models/user';
+import { Validate } from '../helpers/validate';
+import { ActionInputUser, UserSchema } from '../helpers/schema';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { sign } from 'jsonwebtoken';
 import {
   JWT_SECRET_ACCESS_TOKEN,
   JWT_SECRET_REFRESH_TOKEN,
-} from "../configs/constant";
-import { prisma } from "../database/prisma";
+} from '../configs/constant';
+import { prisma } from '../database/prisma';
 
 export const SignIn = async (req: Request, res: Response) => {
   const body: ActionInputUser = req.body;
@@ -22,7 +22,7 @@ export const SignIn = async (req: Request, res: Response) => {
   if (validation) {
     resJson = {
       code: 400,
-      status: "Bad Request",
+      status: 'Bad Request',
       data: [],
       errors: validation,
     };
@@ -34,9 +34,9 @@ export const SignIn = async (req: Request, res: Response) => {
   if (!data[0]) {
     resJson = {
       code: 404,
-      status: "Not Found",
+      status: 'Not Found',
       data: [],
-      errors: ["Email or Password is correct"],
+      errors: ['Email atau Password tidak cocok'],
     };
     return res.status(404).json(resJson);
   }
@@ -44,9 +44,11 @@ export const SignIn = async (req: Request, res: Response) => {
   if (!data[0].isVerified) {
     resJson = {
       code: 401,
-      status: "Unautorized",
+      status: 'Unautorized',
       data: [],
-      errors: ["Email Not Verified, Please Verified youre email"],
+      errors: [
+        'Email belum di verifikasi, silahkan verifikasi email terlebih dahulu',
+      ],
     };
     return res.status(401).json(resJson);
   }
@@ -54,24 +56,24 @@ export const SignIn = async (req: Request, res: Response) => {
   if (!data[0].isActive) {
     resJson = {
       code: 401,
-      status: "Unautorized",
+      status: 'Unautorized',
       data: [],
-      errors: ["User Not Active, Please contact administrator"],
+      errors: ['Account belum Aktif, hubungi admin untuk aktifasi Account'],
     };
     return res.status(401).json(resJson);
   }
 
   const checkPassword = await bcrypt.compare(
     body.passwordHash,
-    data[0].passwordHash
+    data[0].passwordHash,
   );
 
   if (!checkPassword) {
     resJson = {
       code: 404,
-      status: "Not Found",
+      status: 'Not Found',
       data: [],
-      errors: ["Email or Password is correct"],
+      errors: ['Email atau Password tidak cocok'],
     };
     return res.status(404).json(resJson);
   }
@@ -84,8 +86,8 @@ export const SignIn = async (req: Request, res: Response) => {
     },
     String(JWT_SECRET_REFRESH_TOKEN),
     {
-      expiresIn: "30d",
-    }
+      expiresIn: '30d',
+    },
   );
 
   const accessToken = sign(
@@ -96,8 +98,8 @@ export const SignIn = async (req: Request, res: Response) => {
     },
     String(JWT_SECRET_ACCESS_TOKEN),
     {
-      expiresIn: "1h",
-    }
+      expiresIn: '1h',
+    },
   );
 
   const newData = await prisma.user.update({
@@ -111,7 +113,7 @@ export const SignIn = async (req: Request, res: Response) => {
 
   resJson = {
     code: 200,
-    status: "OK",
+    status: 'OK',
     data: [
       {
         id: newData.id,
@@ -124,10 +126,10 @@ export const SignIn = async (req: Request, res: Response) => {
     errors: [],
   };
   return res
-    .cookie("token", refreshToken, {
+    .cookie('token', refreshToken, {
       httpOnly: true,
       maxAge: 30 * 24 * 60 * 60 * 1000,
-      path: "/",
+      path: '/',
       // secure: true,
     })
     .status(200)
@@ -142,7 +144,7 @@ export const SignUp = async (req: Request, res: Response) => {
   if (validation) {
     resJson = {
       code: 400,
-      status: "Bad Request",
+      status: 'Bad Request',
       data: [],
       errors: validation,
     };
@@ -153,34 +155,36 @@ export const SignUp = async (req: Request, res: Response) => {
   if (checkUserAlreadyExist.data[0]) {
     resJson = {
       code: 409,
-      status: "Conflict",
+      status: 'Conflict',
       data: [],
-      errors: ["Email Already Exist"],
+      errors: [
+        'Email sudah terdaftar, silahkan masuk dengan menggunakan email ini',
+      ],
     };
     return res.status(409).json(resJson);
   }
 
-  const token = crypto.randomBytes(32).toString("hex");
+  const token = crypto.randomBytes(32).toString('hex');
   const { data, errors } = await CreateUser(body, token);
   if (errors?.length !== 0) {
     resJson = {
       code: 500,
-      status: "Internal Server Error",
+      status: 'Internal Server Error',
       data: [],
-      errors: ["Error to create data user"],
+      errors: ['gagal menyimpan data, server bermasalah'],
     };
   }
 
   createTransporter(
     body.email,
-    "Verification User",
-    bodyEmail(`http://localhost:3000/auth/verified/${token}`)
+    'Verification User',
+    bodyEmail(`http://localhost:3000/auth/verified/${token}`),
   );
 
   if (data) {
     resJson = {
       code: 201,
-      status: "Created",
+      status: 'Created',
       data: data,
       errors: [],
     };
@@ -196,9 +200,9 @@ export const SignOut = async (req: Request, res: Response) => {
   if (!token) {
     resJson = {
       code: 401,
-      status: "Unautorized",
+      status: 'Unautorized',
       data: [],
-      errors: ["Token is required, Youre not login"],
+      errors: ['Token tidak boleh kosong'],
     };
     return res.status(401).json(resJson);
   }
@@ -211,9 +215,9 @@ export const SignOut = async (req: Request, res: Response) => {
   if (!user) {
     resJson = {
       code: 401,
-      status: "Unautorized",
+      status: 'Unautorized',
       data: [],
-      errors: ["Token not valid"],
+      errors: ['Token tidak valid'],
     };
   }
 
@@ -223,22 +227,22 @@ export const SignOut = async (req: Request, res: Response) => {
         id: user?.id,
       },
       data: {
-        refreshToken: "",
+        refreshToken: '',
       },
     });
     resJson = {
       code: 200,
-      status: "OK",
-      data: [{ message: "Logout Success" }],
+      status: 'OK',
+      data: [{ message: 'Sukses keluar aplikasi' }],
       errors: [],
     };
-    return res.clearCookie("token", { path: "/" }).status(200).json(resJson);
+    return res.clearCookie('token', { path: '/' }).status(200).json(resJson);
   } catch (error) {
     resJson = {
       code: 500,
-      status: "Internal Server Error",
+      status: 'Internal Server Error',
       data: [],
-      errors: ["Something wrong, Logout Failed"],
+      errors: ['Server error'],
     };
     return res.status(500).json(resJson);
   }
