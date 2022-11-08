@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SignOut = exports.SignUp = exports.SignIn = void 0;
+exports.UpdateUser = exports.GetUser = exports.SignOut = exports.SignUp = exports.SignIn = void 0;
 const email_1 = __importStar(require("../helpers/email"));
 const user_1 = require("../models/user");
 const validate_1 = require("../helpers/validate");
@@ -53,7 +53,7 @@ const SignIn = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     if (validation) {
         resJson = {
             code: 400,
-            status: "Bad Request",
+            status: 'Bad Request',
             data: [],
             errors: validation,
         };
@@ -63,27 +63,29 @@ const SignIn = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     if (!data[0]) {
         resJson = {
             code: 404,
-            status: "Not Found",
+            status: 'Not Found',
             data: [],
-            errors: ["Email or Password is correct"],
+            errors: ['Email atau Password tidak cocok'],
         };
         return res.status(404).json(resJson);
     }
     if (!data[0].isVerified) {
         resJson = {
             code: 401,
-            status: "Unautorized",
+            status: 'Unautorized',
             data: [],
-            errors: ["Email Not Verified, Please Verified youre email"],
+            errors: [
+                'Email belum di verifikasi, silahkan verifikasi email terlebih dahulu',
+            ],
         };
         return res.status(401).json(resJson);
     }
     if (!data[0].isActive) {
         resJson = {
             code: 401,
-            status: "Unautorized",
+            status: 'Unautorized',
             data: [],
-            errors: ["User Not Active, Please contact administrator"],
+            errors: ['Account belum Aktif, hubungi admin untuk aktifasi Account'],
         };
         return res.status(401).json(resJson);
     }
@@ -91,9 +93,9 @@ const SignIn = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     if (!checkPassword) {
         resJson = {
             code: 404,
-            status: "Not Found",
+            status: 'Not Found',
             data: [],
-            errors: ["Email or Password is correct"],
+            errors: ['Email atau Password tidak cocok'],
         };
         return res.status(404).json(resJson);
     }
@@ -102,14 +104,14 @@ const SignIn = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         email: data[0].email,
         role: data[0].role,
     }, String(constant_1.JWT_SECRET_REFRESH_TOKEN), {
-        expiresIn: "30d",
+        expiresIn: '30d',
     });
     const accessToken = (0, jsonwebtoken_1.sign)({
         id: data[0].id,
         email: data[0].email,
         role: data[0].role,
     }, String(constant_1.JWT_SECRET_ACCESS_TOKEN), {
-        expiresIn: "1h",
+        expiresIn: '1h',
     });
     const newData = yield prisma_1.prisma.user.update({
         where: {
@@ -121,7 +123,7 @@ const SignIn = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     });
     resJson = {
         code: 200,
-        status: "OK",
+        status: 'OK',
         data: [
             {
                 id: newData.id,
@@ -134,10 +136,10 @@ const SignIn = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         errors: [],
     };
     return res
-        .cookie("token", refreshToken, {
+        .cookie('token', refreshToken, {
         httpOnly: true,
         maxAge: 30 * 24 * 60 * 60 * 1000,
-        path: "/",
+        path: '/',
         // secure: true,
     })
         .status(200)
@@ -151,7 +153,7 @@ const SignUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     if (validation) {
         resJson = {
             code: 400,
-            status: "Bad Request",
+            status: 'Bad Request',
             data: [],
             errors: validation,
         };
@@ -161,27 +163,29 @@ const SignUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     if (checkUserAlreadyExist.data[0]) {
         resJson = {
             code: 409,
-            status: "Conflict",
+            status: 'Conflict',
             data: [],
-            errors: ["Email Already Exist"],
+            errors: [
+                'Email sudah terdaftar, silahkan masuk dengan menggunakan email ini',
+            ],
         };
         return res.status(409).json(resJson);
     }
-    const token = crypto_1.default.randomBytes(32).toString("hex");
+    const token = crypto_1.default.randomBytes(32).toString('hex');
     const { data, errors } = yield (0, user_1.CreateUser)(body, token);
     if ((errors === null || errors === void 0 ? void 0 : errors.length) !== 0) {
         resJson = {
             code: 500,
-            status: "Internal Server Error",
+            status: 'Internal Server Error',
             data: [],
-            errors: ["Error to create data user"],
+            errors: ['gagal menyimpan data, server bermasalah'],
         };
     }
-    (0, email_1.default)(body.email, "Verification User", (0, email_1.bodyEmail)(`http://localhost:3000/auth/verified/${token}`));
+    (0, email_1.default)(body.email, 'Verification User', (0, email_1.bodyEmail)(`http://localhost:3000/auth/verified/${token}`));
     if (data) {
         resJson = {
             code: 201,
-            status: "Created",
+            status: 'Created',
             data: data,
             errors: [],
         };
@@ -196,9 +200,9 @@ const SignOut = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     if (!token) {
         resJson = {
             code: 401,
-            status: "Unautorized",
+            status: 'Unautorized',
             data: [],
-            errors: ["Token is required, Youre not login"],
+            errors: ['Token tidak boleh kosong'],
         };
         return res.status(401).json(resJson);
     }
@@ -210,9 +214,9 @@ const SignOut = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     if (!user) {
         resJson = {
             code: 401,
-            status: "Unautorized",
+            status: 'Unautorized',
             data: [],
-            errors: ["Token not valid"],
+            errors: ['Token tidak valid'],
         };
     }
     try {
@@ -221,28 +225,72 @@ const SignOut = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 id: user === null || user === void 0 ? void 0 : user.id,
             },
             data: {
-                refreshToken: "",
+                refreshToken: '',
             },
         });
         resJson = {
             code: 200,
-            status: "OK",
-            data: [{ message: "Logout Success" }],
+            status: 'OK',
+            data: [{ message: 'Sukses keluar aplikasi' }],
             errors: [],
         };
-        return res.clearCookie("token", { path: "/" }).status(200).json(resJson);
+        return res.clearCookie('token', { path: '/' }).status(200).json(resJson);
     }
     catch (error) {
         resJson = {
             code: 500,
-            status: "Internal Server Error",
+            status: 'Internal Server Error',
             data: [],
-            errors: ["Something wrong, Logout Failed"],
+            errors: ['Server error'],
         };
         return res.status(500).json(resJson);
     }
 });
 exports.SignOut = SignOut;
+const GetUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    let resJson;
+    const { data, errors } = yield (0, user_1.GetUsers)();
+    if (errors.length !== 0) {
+        resJson = {
+            code: 500,
+            status: 'internal server error',
+            data: [],
+            errors,
+        };
+        return res.status(500).json(resJson);
+    }
+    resJson = {
+        code: 200,
+        status: 'OK',
+        errors: [],
+        data,
+    };
+    return res.status(200).json(resJson);
+});
+exports.GetUser = GetUser;
+const UpdateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    let resJson;
+    const body = req.body;
+    const validation = yield (0, validate_1.Validate)(schema_1.UserUpdateSchema, body);
+    if (validation) {
+        resJson = {
+            code: 400,
+            status: 'Bad Request',
+            data: [],
+            errors: validation,
+        };
+        return res.status(400).json(resJson);
+    }
+    const { data } = yield (0, user_1.UpdateUserById)(body);
+    resJson = {
+        code: 200,
+        status: 'OK',
+        data,
+        errors: [],
+    };
+    return res.status(200).json(resJson);
+});
+exports.UpdateUser = UpdateUser;
 //   export const verifiedEmail = async (req: Request, res: Response) => {
 //     let resJson: ResponseJson;
 //     const token = req.params.token;

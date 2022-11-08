@@ -26,14 +26,14 @@ const createTransporter = (email, subject, html) => {
             return;
         }
         console.log(info.accepted, info.rejected, info.pending);
-        console.log("Message sent: %s", info.messageId);
-        console.log("Preview URL: %s", nodemailer_1.default.getTestMessageUrl(info));
+        console.log('Message sent: %s', info.messageId);
+        console.log('Preview URL: %s', nodemailer_1.default.getTestMessageUrl(info));
     });
 };
 const bodyEmail = (link) => {
     return `
-    <h1>Verified Email</h1>
-    <p><b> Click link Bottom </b></p>
+    <h1>Verifikasi Email</h1>
+    <p><b> Klik Link di bawah ini : </b></p>
     <a href="${link}">Activate</a>
     `;
 };

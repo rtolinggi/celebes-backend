@@ -81,19 +81,18 @@ model Client {
 model Account {
   noKontrak    String    @id
   costumerName String
+  asset        String
   numPolice    String
   numChassis   String
   numMachine   String
   type         Ride
-  color        String
-  year         DateTime
+  bucket       String
   overdue      String
   outstanding  Int
   branch       String
   tenor        Int
   installment  Int
   createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
   publish      Boolean   @default(true)
   assignBy     String
   Client       Client?   @relation(fields: [clientId], references: [id])

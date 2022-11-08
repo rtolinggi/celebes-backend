@@ -1,9 +1,19 @@
 import type { Request, Response } from 'express';
 import type { ResponseJson } from '../helpers/types';
 import createTransporter, { bodyEmail } from '../helpers/email';
-import { CreateUser, GetUserByEmail } from '../models/user';
+import {
+  CreateUser,
+  GetUserByEmail,
+  GetUsers,
+  UpdateUserById,
+} from '../models/user';
 import { Validate } from '../helpers/validate';
-import { ActionInputUser, UserSchema } from '../helpers/schema';
+import {
+  ActionInputUser,
+  ActionUpdateUser,
+  UserSchema,
+  UserUpdateSchema,
+} from '../helpers/schema';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { sign } from 'jsonwebtoken';
@@ -246,6 +256,53 @@ export const SignOut = async (req: Request, res: Response) => {
     };
     return res.status(500).json(resJson);
   }
+};
+
+export const GetUser = async (req: Request, res: Response) => {
+  let resJson: ResponseJson;
+  const { data, errors } = await GetUsers();
+  if (errors.length !== 0) {
+    resJson = {
+      code: 500,
+      status: 'internal server error',
+      data: [],
+      errors,
+    };
+    return res.status(500).json(resJson);
+  }
+
+  resJson = {
+    code: 200,
+    status: 'OK',
+    errors: [],
+    data,
+  };
+  return res.status(200).json(resJson);
+};
+
+export const UpdateUser = async (req: Request, res: Response) => {
+  let resJson: ResponseJson;
+  const body: ActionUpdateUser = req.body;
+
+  const validation = await Validate(UserUpdateSchema, body);
+  if (validation) {
+    resJson = {
+      code: 400,
+      status: 'Bad Request',
+      data: [],
+      errors: validation,
+    };
+    return res.status(400).json(resJson);
+  }
+
+  const { data } = await UpdateUserById(body);
+  resJson = {
+    code: 200,
+    status: 'OK',
+    data,
+    errors: [],
+  };
+  return res.status(200).json(resJson);
 };
 
 //   export const verifiedEmail = async (req: Request, res: Response) => {

@@ -1,7 +1,7 @@
-import { prisma } from "../database/prisma";
-import { User } from "@prisma/client";
-import { ActionInputUser } from "../helpers/schema";
-import bcrypt from "bcryptjs";
+import { prisma } from '../database/prisma';
+import { User } from '@prisma/client';
+import { ActionInputUser, ActionUpdateUser } from '../helpers/schema';
+import bcrypt from 'bcryptjs';
 
 type result = {
   errors: Array<string>;
@@ -13,7 +13,7 @@ export const GetUsers = async () => {
   try {
     const user = await prisma.user.findMany({
       orderBy: {
-        createdAt: "desc",
+        createdAt: 'desc',
       },
     });
     return <result>{
@@ -63,7 +63,7 @@ export const GetUserByEmail = async (email: string) => {
   } catch (error) {
     return <result>{
       data: [],
-      errors: ["Internal Server Error"],
+      errors: ['Internal Server Error'],
     };
   }
 };
@@ -77,6 +77,7 @@ export const CreateUser = async (body: ActionInputUser, token: string) => {
       data: {
         email: body.email,
         passwordHash: body.passwordHash,
+        role: body.role,
         VerifiedEmail: {
           create: {
             token,
@@ -91,14 +92,36 @@ export const CreateUser = async (body: ActionInputUser, token: string) => {
     };
   } catch (error) {
     return <result>{
-      errors: ["Internal Server Error"],
+      errors: ['Internal Server Error'],
       data: [],
     };
   }
 };
 
 // Update User
-export const UpdateUser = (id: string) => {};
+export const UpdateUserById = async (body: ActionUpdateUser) => {
+  try {
+    const user = await prisma.user.update({
+      data: {
+        role: body.role,
+        isActive: body.isActive,
+      },
+      where: {
+        id: body.id,
+      },
+    });
+
+    return <result>{
+      errors: [],
+      data: [user],
+    };
+  } catch (error) {
+    return <result>{
+      errors: ['Internal Server Error'],
+      data: [],
+    };
+  }
+};
 
 // Delete User
 export const DeleteUser = (id: string) => {};
