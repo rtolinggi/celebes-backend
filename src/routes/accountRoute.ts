@@ -1,8 +1,8 @@
 import express from 'express';
-import { getDataAccount } from '../controllers/accountController';
+import { getDataAccountByNopol } from '../controllers/accountController';
 
 const authRoute = express.Router();
 
-authRoute.get('/', getDataAccount);
+authRoute.get('/:nopol', getDataAccountByNopol);
 
 export default authRoute;

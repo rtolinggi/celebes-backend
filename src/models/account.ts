@@ -6,16 +6,16 @@ type result = {
   data: Array<Account>;
 };
 
-export const GetAccount = async () => {
+export const GetAccountByNopol = async (id: string) => {
   try {
-    const res = await prisma.account.findMany({
-      orderBy: {
-        costumerName: 'desc',
+    const res = await prisma.account.findFirst({
+      where: {
+        numPolice: id,
       },
     });
     return <result>{
-      data: res,
       errors: [],
+      data: [res],
     };
   } catch (error) {
     return <result>{

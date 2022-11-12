@@ -9,6 +9,7 @@ const cors_1 = __importDefault(require("cors"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const constant_1 = require("./configs/constant");
 const authRoute_1 = __importDefault(require("./routes/authRoute"));
+const accountRoute_1 = __importDefault(require("./routes/accountRoute"));
 const whiteList = ['http://localhost:3000'];
 const corsOptions = {
     origin(requestOrigin, callback) {
@@ -29,6 +30,7 @@ app.use((0, cookie_parser_1.default)());
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: false }));
 app.use('/api/auth', authRoute_1.default);
+app.use('/api/account', accountRoute_1.default);
 app.listen(port, () => {
     console.log(`server running on port : ${port}`);
 });

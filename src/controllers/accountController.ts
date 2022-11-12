@@ -1,10 +1,12 @@
 import type { Request, Response } from 'express';
 import type { ResponseJson } from '../helpers/types';
-import { GetAccount } from '../models/account';
+import { GetAccountByNopol } from '../models/account';
 
-export const getDataAccount = async (req: Request, res: Response) => {
+export const getDataAccountByNopol = async (req: Request, res: Response) => {
   let resJson: ResponseJson;
-  const { data, errors } = await GetAccount();
+  let nopol = req.params.nopol;
+  console.log(nopol);
+  const { data, errors } = await GetAccountByNopol(nopol);
   if (errors.length !== 0) {
     resJson = {
       code: 500,
